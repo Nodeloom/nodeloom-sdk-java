@@ -1,0 +1,85 @@
+package com.nodeloom.sdk.transport;
+
+import com.nodeloom.sdk.NodeLoomConfig;
+import com.nodeloom.sdk.event.BatchRequest;
+import com.nodeloom.sdk.event.BatchResponse;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Sends batch telemetry requests to the NodeLoom ingestion API using
+ * {@link java.net.http.HttpClient}.
+ *
+ * <p>This class is thread-safe. The underlying HttpClient manages its own
+ * connection pool.</p>
+ */
+public class HttpTransport {
+
+    private static final Logger logger = Logger.getLogger(HttpTransport.class.getName());
+
+    private static final String BATCH_PATH = "/api/sdk/v1/telemetry";
+
+    private final HttpClient httpClient;
+    private final String batchUrl;
+    private final String apiKey;
+    private final Duration timeout;
+
+    public HttpTransport(NodeLoomConfig config) {
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(config.getHttpTimeoutMs()))
+                .build();
+        this.batchUrl = stripTrailingSlash(config.getEndpoint()) + BATCH_PATH;
+        this.apiKey = config.getApiKey();
+        this.timeout = Duration.ofMillis(config.getHttpTimeoutMs());
+    }
+
+    /**
+     * Sends a batch of events to the NodeLoom API.
+     *
+     * @param batch the batch request to send
+     * @return the response from the server
+     * @throws Exception if the HTTP call fails for any reason (network error, timeout, etc.)
+     */
+    public BatchResponse send(BatchRequest batch) throws Exception {
+        String json = batch.toJson();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(batchUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("User-Agent", "nodeloom-java-sdk/" + BatchRequest.SDK_VERSION)
+                .timeout(timeout)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Sending batch of " + batch.size() + " events to " + batchUrl);
+        }
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        return new BatchResponse(response.statusCode(), response.body());
+    }
+
+    /**
+     * Shuts down the underlying HTTP client, releasing resources.
+     */
+    public void shutdown() {
+        // HttpClient in Java 11+ does not have an explicit close/shutdown.
+        // In Java 21+, HttpClient implements AutoCloseable.
+        // For compatibility, we simply null out the reference.
+    }
+
+    private static String stripTrailingSlash(String url) {
+        if (url != null && url.endsWith("/")) {
+            return url.substring(0, url.length() - 1);
+        }
+        return url;
+    }
+}
