@@ -1,7 +1,7 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
-import com.nodeloom.sdk.event.TelemetryEvent;
-import com.nodeloom.sdk.queue.TelemetryQueue;
+import io.nodeloom.sdk.event.TelemetryEvent;
+import io.nodeloom.sdk.queue.TelemetryQueue;
 
 import java.util.ArrayList;
 import java.util.List;

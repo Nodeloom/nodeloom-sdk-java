@@ -1,4 +1,4 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
 /**
  * Defines the type of work a span represents.

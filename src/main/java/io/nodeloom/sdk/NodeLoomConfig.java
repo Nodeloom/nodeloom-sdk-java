@@ -1,4 +1,4 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
 /**
  * Immutable configuration for the NodeLoom SDK client.

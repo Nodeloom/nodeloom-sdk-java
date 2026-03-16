@@ -1,11 +1,11 @@
-package com.nodeloom.sdk.batch;
+package io.nodeloom.sdk.batch;
 
-import com.nodeloom.sdk.NodeLoomConfig;
-import com.nodeloom.sdk.event.BatchRequest;
-import com.nodeloom.sdk.event.BatchResponse;
-import com.nodeloom.sdk.event.TelemetryEvent;
-import com.nodeloom.sdk.queue.TelemetryQueue;
-import com.nodeloom.sdk.transport.HttpTransport;
+import io.nodeloom.sdk.NodeLoomConfig;
+import io.nodeloom.sdk.event.BatchRequest;
+import io.nodeloom.sdk.event.BatchResponse;
+import io.nodeloom.sdk.event.TelemetryEvent;
+import io.nodeloom.sdk.queue.TelemetryQueue;
+import io.nodeloom.sdk.transport.HttpTransport;
 
 import java.util.List;
 import java.util.concurrent.Executors;

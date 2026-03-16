@@ -1,4 +1,4 @@
-package com.nodeloom.sdk.event;
+package io.nodeloom.sdk.event;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;

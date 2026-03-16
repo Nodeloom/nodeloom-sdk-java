@@ -1,8 +1,8 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
-import com.nodeloom.sdk.batch.BatchProcessor;
-import com.nodeloom.sdk.queue.TelemetryQueue;
-import com.nodeloom.sdk.transport.HttpTransport;
+import io.nodeloom.sdk.batch.BatchProcessor;
+import io.nodeloom.sdk.queue.TelemetryQueue;
+import io.nodeloom.sdk.transport.HttpTransport;
 
 import java.util.Objects;
 import java.util.logging.Logger;

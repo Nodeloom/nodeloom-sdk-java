@@ -1,4 +1,4 @@
-package com.nodeloom.sdk.event;
+package io.nodeloom.sdk.event;
 
 /**
  * Represents the response from the NodeLoom batch ingestion endpoint.

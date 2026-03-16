@@ -1,4 +1,4 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
 /**
  * Represents the final status of a trace.

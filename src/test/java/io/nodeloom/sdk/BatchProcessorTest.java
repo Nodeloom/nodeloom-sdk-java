@@ -1,11 +1,11 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
-import com.nodeloom.sdk.batch.BatchProcessor;
-import com.nodeloom.sdk.event.BatchRequest;
-import com.nodeloom.sdk.event.BatchResponse;
-import com.nodeloom.sdk.event.TelemetryEvent;
-import com.nodeloom.sdk.queue.TelemetryQueue;
-import com.nodeloom.sdk.transport.HttpTransport;
+import io.nodeloom.sdk.batch.BatchProcessor;
+import io.nodeloom.sdk.event.BatchRequest;
+import io.nodeloom.sdk.event.BatchResponse;
+import io.nodeloom.sdk.event.TelemetryEvent;
+import io.nodeloom.sdk.queue.TelemetryQueue;
+import io.nodeloom.sdk.transport.HttpTransport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

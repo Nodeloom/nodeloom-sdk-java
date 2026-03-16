@@ -1,8 +1,8 @@
-package com.nodeloom.sdk.transport;
+package io.nodeloom.sdk.transport;
 
-import com.nodeloom.sdk.NodeLoomConfig;
-import com.nodeloom.sdk.event.BatchRequest;
-import com.nodeloom.sdk.event.BatchResponse;
+import io.nodeloom.sdk.NodeLoomConfig;
+import io.nodeloom.sdk.event.BatchRequest;
+import io.nodeloom.sdk.event.BatchResponse;
 
 import java.net.URI;
 import java.net.http.HttpClient;

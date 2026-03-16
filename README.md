@@ -23,7 +23,7 @@ Java SDK for instrumenting AI agents and sending telemetry to [NodeLoom](https:/
 
 ```xml
 <dependency>
-    <groupId>com.nodeloom</groupId>
+    <groupId>io.nodeloom</groupId>
     <artifactId>nodeloom-sdk</artifactId>
     <version>0.1.0</version>
 </dependency>
@@ -32,13 +32,13 @@ Java SDK for instrumenting AI agents and sending telemetry to [NodeLoom](https:/
 ### Gradle
 
 ```groovy
-implementation 'com.nodeloom:nodeloom-sdk:0.1.0'
+implementation 'io.nodeloom:nodeloom-sdk:0.1.0'
 ```
 
 ## Quick Start
 
 ```java
-import com.nodeloom.sdk.*;
+import io.nodeloom.sdk.*;
 import java.util.Map;
 
 try (NodeLoom client = NodeLoom.builder()

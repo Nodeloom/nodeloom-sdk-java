@@ -1,7 +1,7 @@
-package com.nodeloom.sdk;
+package io.nodeloom.sdk;
 
-import com.nodeloom.sdk.batch.BatchProcessor;
-import com.nodeloom.sdk.queue.TelemetryQueue;
+import io.nodeloom.sdk.batch.BatchProcessor;
+import io.nodeloom.sdk.queue.TelemetryQueue;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
