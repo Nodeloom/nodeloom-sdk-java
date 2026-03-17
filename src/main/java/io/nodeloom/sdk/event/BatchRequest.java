@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  */
 public final class BatchRequest {
 
-    public static final String SDK_VERSION = "0.1.0";
+    public static final String SDK_VERSION = "0.2.0";
     public static final String SDK_LANGUAGE = "java";
 
     private final List<TelemetryEvent> events;

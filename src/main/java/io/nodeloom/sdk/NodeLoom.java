@@ -1,5 +1,6 @@
 package io.nodeloom.sdk;
 
+import io.nodeloom.sdk.api.ApiClient;
 import io.nodeloom.sdk.batch.BatchProcessor;
 import io.nodeloom.sdk.queue.TelemetryQueue;
 import io.nodeloom.sdk.transport.HttpTransport;
@@ -52,6 +53,7 @@ public final class NodeLoom implements AutoCloseable {
     private final NodeLoomConfig config;
     private final TelemetryQueue queue;
     private final BatchProcessor batchProcessor;
+    private volatile ApiClient apiClient;
     private volatile boolean closed = false;
 
     private NodeLoom(NodeLoomConfig config) {
@@ -142,6 +144,22 @@ public final class NodeLoom implements AutoCloseable {
         closed = true;
         logger.fine("Shutting down NodeLoom SDK");
         batchProcessor.shutdown(SHUTDOWN_TIMEOUT_MS);
+    }
+
+    /**
+     * Access the REST API client.
+     * Uses the same API key and endpoint as the telemetry client.
+     * SDK tokens can now authenticate against all NodeLoom API endpoints.
+     */
+    public ApiClient api() {
+        if (apiClient == null) {
+            synchronized (this) {
+                if (apiClient == null) {
+                    apiClient = new ApiClient(config.getApiKey(), config.getEndpoint());
+                }
+            }
+        }
+        return apiClient;
     }
 
     /**
