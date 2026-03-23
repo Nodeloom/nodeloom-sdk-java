@@ -212,6 +212,16 @@ public class ApiClient {
         return request("GET", path);
     }
 
+    // -- Agent Callback --
+
+    public String setCallbackUrl(String agentName, String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/agents/" + encode(agentName) + "/callback", bodyJson);
+    }
+
+    public String removeCallbackUrl(String agentName) throws ApiException, IOException {
+        return request("DELETE", "/api/sdk/v1/agents/" + encode(agentName) + "/callback");
+    }
+
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
