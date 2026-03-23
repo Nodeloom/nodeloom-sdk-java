@@ -105,6 +105,35 @@ public final class NodeLoom implements AutoCloseable {
     }
 
     /**
+     * Emit a custom metric event.
+     */
+    public void metric(String name, double value, String unit, java.util.Map<String, String> tags) {
+        if (closed) return;
+        io.nodeloom.sdk.event.TelemetryEvent event = new io.nodeloom.sdk.event.TelemetryEvent()
+                .put("type", "metric")
+                .put("metric_name", name)
+                .put("metric_value", value);
+        if (unit != null) event.put("metric_unit", unit);
+        if (tags != null) event.put("metric_tags", tags);
+        event.putTimestampNow("timestamp");
+        queue.offer(event);
+    }
+
+    /**
+     * Emit a feedback event tied to a trace.
+     */
+    public void feedback(String traceId, int rating, String comment) {
+        if (closed) return;
+        io.nodeloom.sdk.event.TelemetryEvent event = new io.nodeloom.sdk.event.TelemetryEvent()
+                .put("type", "feedback")
+                .put("trace_id", traceId)
+                .put("rating", rating);
+        if (comment != null) event.put("comment", comment);
+        event.putTimestampNow("timestamp");
+        queue.offer(event);
+    }
+
+    /**
      * Forces an immediate flush of any queued events. This is useful for
      * testing or when you want to ensure events are sent before a specific
      * point in your application.

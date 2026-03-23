@@ -35,6 +35,8 @@ public final class Span implements AutoCloseable {
     private Map<String, Object> output;
     private Map<String, Object> metadata;
     private Map<String, Object> tokenUsage;
+    private String promptTemplate;
+    private Integer promptVersion;
     private String status = "success";
     private String errorMessage;
     private boolean ended = false;
@@ -140,6 +142,30 @@ public final class Span implements AutoCloseable {
     }
 
     /**
+     * Records which prompt template and version was used.
+     */
+    public Span setPrompt(String template, int version) {
+        this.promptTemplate = template;
+        this.promptVersion = version;
+        return this;
+    }
+
+    /**
+     * Emit a custom metric tied to this span's trace.
+     */
+    public void metric(String name, double value, String unit, Map<String, String> tags) {
+        TelemetryEvent event = new TelemetryEvent()
+                .put("type", "metric")
+                .put("trace_id", traceId)
+                .put("metric_name", name)
+                .put("metric_value", value);
+        if (unit != null) event.put("metric_unit", unit);
+        if (tags != null) event.put("metric_tags", tags);
+        event.putTimestampNow("timestamp");
+        queue.offer(event);
+    }
+
+    /**
      * Creates a child span nested under this span.
      *
      * @param name     the child span name
@@ -192,6 +218,12 @@ public final class Span implements AutoCloseable {
         }
         if (errorMessage != null) {
             event.put("error", errorMessage);
+        }
+        if (promptTemplate != null) {
+            event.put("prompt_template", promptTemplate);
+        }
+        if (promptVersion != null) {
+            event.put("prompt_version", promptVersion);
         }
 
         event.put("timestamp", startTimestamp);

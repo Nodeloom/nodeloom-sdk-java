@@ -29,6 +29,7 @@ public final class Trace implements AutoCloseable {
     private Map<String, Object> input;
     private Map<String, Object> output;
     private String errorMessage;
+    private String sessionId;
     private TraceStatus finalStatus;
     private boolean started = false;
     private boolean ended = false;
@@ -62,6 +63,14 @@ public final class Trace implements AutoCloseable {
     }
 
     /**
+     * Sets the session ID for conversation tracking.
+     */
+    public Trace sessionId(String sessionId) {
+        this.sessionId = sessionId;
+        return this;
+    }
+
+    /**
      * Starts the trace, emitting a trace_start event.
      *
      * @return this trace for use in try-with-resources or further span creation
@@ -87,10 +96,28 @@ public final class Trace implements AutoCloseable {
         if (input != null) {
             event.put("input", input);
         }
+        if (sessionId != null) {
+            event.put("session_id", sessionId);
+        }
         event.putTimestampNow("timestamp");
 
         queue.offer(event);
         return this;
+    }
+
+    /**
+     * Submit feedback for this trace.
+     */
+    public void feedback(int rating, String comment) {
+        TelemetryEvent event = new TelemetryEvent()
+                .put("type", "feedback")
+                .put("trace_id", traceId)
+                .put("rating", rating);
+        if (comment != null) {
+            event.put("comment", comment);
+        }
+        event.putTimestampNow("timestamp");
+        queue.offer(event);
     }
 
     /**

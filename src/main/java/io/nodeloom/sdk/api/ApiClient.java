@@ -132,6 +132,86 @@ public class ApiClient {
         return request("POST", "/api/guardrails/check?teamId=" + encode(teamId), requestBodyJson);
     }
 
+    // -- Feedback --
+
+    public String submitFeedback(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/feedback", bodyJson);
+    }
+
+    public String listFeedback(String queryParams) throws ApiException, IOException {
+        String path = "/api/sdk/v1/feedback";
+        if (queryParams != null && !queryParams.isEmpty()) path += "?" + queryParams;
+        return request("GET", path);
+    }
+
+    // -- Sentiment --
+
+    public String analyzeSentiment(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/sentiment", bodyJson);
+    }
+
+    // -- Costs --
+
+    public String getCosts(String queryParams) throws ApiException, IOException {
+        String path = "/api/sdk/v1/costs";
+        if (queryParams != null && !queryParams.isEmpty()) path += "?" + queryParams;
+        return request("GET", path);
+    }
+
+    // -- Webhooks --
+
+    public String registerWebhook(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/alerts/webhooks", bodyJson);
+    }
+
+    public String listWebhooks() throws ApiException, IOException {
+        return request("GET", "/api/sdk/v1/alerts/webhooks");
+    }
+
+    public String deleteWebhook(String webhookId) throws ApiException, IOException {
+        return request("DELETE", "/api/sdk/v1/alerts/webhooks/" + encode(webhookId));
+    }
+
+    // -- Prompts --
+
+    public String createPrompt(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/prompts", bodyJson);
+    }
+
+    public String getPrompt(String name, String queryParams) throws ApiException, IOException {
+        String path = "/api/sdk/v1/prompts/" + encode(name);
+        if (queryParams != null && !queryParams.isEmpty()) path += "?" + queryParams;
+        return request("GET", path);
+    }
+
+    public String listPrompts() throws ApiException, IOException {
+        return request("GET", "/api/sdk/v1/prompts");
+    }
+
+    // -- Red Team --
+
+    public String startRedTeamScan(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/redteam/scan", bodyJson);
+    }
+
+    public String getRedTeamScan(String scanId) throws ApiException, IOException {
+        return request("GET", "/api/sdk/v1/redteam/scan/" + encode(scanId));
+    }
+
+    // -- Evaluation --
+
+    public String triggerEvaluation(String bodyJson) throws ApiException, IOException {
+        return request("POST", "/api/sdk/v1/evaluate", bodyJson);
+    }
+
+    // -- Metrics --
+
+    public String getMetrics(String queryParams) throws ApiException, IOException {
+        String path = "/api/sdk/v1/metrics";
+        if (queryParams != null && !queryParams.isEmpty()) path += "?" + queryParams;
+        return request("GET", path);
+    }
+
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
