@@ -222,6 +222,11 @@ public class ApiClient {
         return request("DELETE", "/api/sdk/v1/agents/" + encode(agentName) + "/callback");
     }
 
+    /** Get guardrail config for an SDK agent (read-only, configure via NodeLoom UI). */
+    public String getGuardrailConfig(String agentName) throws ApiException, IOException {
+        return request("GET", "/api/sdk/v1/agents/" + encode(agentName) + "/guardrails");
+    }
+
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
