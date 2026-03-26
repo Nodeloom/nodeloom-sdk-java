@@ -99,10 +99,39 @@ public final class Trace implements AutoCloseable {
         if (sessionId != null) {
             event.put("session_id", sessionId);
         }
+        // Agent discovery: framework detection
+        String framework = detectFramework();
+        if (framework != null) {
+            event.put("framework", framework);
+        }
+        event.put("sdk_language", "java");
         event.putTimestampNow("timestamp");
 
         queue.offer(event);
         return this;
+    }
+
+    private static volatile String cachedFramework;
+
+    private static String detectFramework() {
+        if (cachedFramework != null) {
+            return cachedFramework;
+        }
+        String[][] frameworks = {
+            {"dev.langchain4j.model.chat.ChatLanguageModel", "langchain4j"},
+            {"io.github.crew_ai.CrewAI", "crewai"},
+        };
+        for (String[] fw : frameworks) {
+            try {
+                Class.forName(fw[0]);
+                cachedFramework = fw[1];
+                return cachedFramework;
+            } catch (ClassNotFoundException e) {
+                // Not on classpath
+            }
+        }
+        cachedFramework = "custom";
+        return cachedFramework;
     }
 
     /**
