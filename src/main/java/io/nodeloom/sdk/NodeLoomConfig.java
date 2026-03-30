@@ -90,4 +90,10 @@ public final class NodeLoomConfig {
     public long getHttpTimeoutMs() {
         return httpTimeoutMs;
     }
+
+    @Override
+    public String toString() {
+        String maskedKey = apiKey != null && apiKey.length() > 6 ? apiKey.substring(0, 6) + "***" : "***";
+        return "NodeLoomConfig{endpoint='" + endpoint + "', apiKey='" + maskedKey + "', environment='" + environment + "'}";
+    }
 }

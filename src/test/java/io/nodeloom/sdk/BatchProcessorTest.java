@@ -266,7 +266,7 @@ class BatchProcessorTest {
         processor.processQueue();
 
         String json = transport.batches.get(0).toJson();
-        assertTrue(json.contains("\"sdk_version\":\"0.3.1\""));
+        assertTrue(json.contains("\"sdk_version\":\"0.6.0\""));
         assertTrue(json.contains("\"sdk_language\":\"java\""));
     }
 

@@ -64,7 +64,12 @@ public class HttpTransport {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        return new BatchResponse(response.statusCode(), response.body());
+        String body = response.body();
+        if (body != null && body.length() > 4096) {
+            body = body.substring(0, 4096) + "...[truncated]";
+        }
+
+        return new BatchResponse(response.statusCode(), body);
     }
 
     /**

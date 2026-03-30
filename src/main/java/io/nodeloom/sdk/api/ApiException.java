@@ -9,7 +9,7 @@ public class ApiException extends Exception {
     private final String responseBody;
 
     public ApiException(int statusCode, String responseBody) {
-        super("API error " + statusCode + ": " + responseBody);
+        super("API error " + statusCode + ": " + (responseBody != null && responseBody.length() > 1024 ? responseBody.substring(0, 1024) + "...[truncated]" : responseBody));
         this.statusCode = statusCode;
         this.responseBody = responseBody;
     }

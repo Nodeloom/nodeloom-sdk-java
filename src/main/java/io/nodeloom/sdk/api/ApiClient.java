@@ -84,11 +84,15 @@ public class ApiClient {
             );
 
             int status = response.statusCode();
+            String responseBody = response.body();
+            if (responseBody != null && responseBody.length() > 4096) {
+                responseBody = responseBody.substring(0, 4096) + "...[truncated]";
+            }
             if (status < 200 || status >= 300) {
-                throw new ApiException(status, response.body());
+                throw new ApiException(status, responseBody);
             }
 
-            return response.body();
+            return responseBody;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Request interrupted", e);

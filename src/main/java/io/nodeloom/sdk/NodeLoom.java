@@ -343,6 +343,10 @@ public final class NodeLoom implements AutoCloseable {
                 throw new IllegalArgumentException("apiKey must not be blank");
             }
 
+            if (endpoint != null && !endpoint.startsWith("https://") && !endpoint.contains("localhost") && !endpoint.contains("127.0.0.1")) {
+                logger.warning("NodeLoom endpoint '" + endpoint + "' does not use HTTPS. API keys will be sent in plaintext.");
+            }
+
             NodeLoomConfig config = new NodeLoomConfig(
                     apiKey,
                     endpoint,
