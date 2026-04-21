@@ -9,6 +9,8 @@ import io.nodeloom.sdk.TraceStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handler for auto-instrumenting Anthropic Managed Agent sessions with NodeLoom.
@@ -28,6 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * }</pre>
  */
 public class AnthropicManagedAgentsHandler {
+
+    private static final Logger logger = Logger.getLogger(AnthropicManagedAgentsHandler.class.getName());
 
     private final NodeLoom client;
     private final String agentName;
@@ -138,7 +142,7 @@ public class AnthropicManagedAgentsHandler {
                         + ",\"direction\":\"input\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
-                // Fire-and-forget: return a safe default on failure
+                logger.log(Level.FINE, "Anthropic guardrail input check failed", e);
             }
             return Map.of("passed", true, "violations", List.of());
         }
@@ -156,7 +160,7 @@ public class AnthropicManagedAgentsHandler {
                         + ",\"direction\":\"output\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
-                // Fire-and-forget: return a safe default on failure
+                logger.log(Level.FINE, "Anthropic guardrail output check failed", e);
             }
             return Map.of("passed", true, "violations", List.of());
         }
@@ -229,10 +233,30 @@ public class AnthropicManagedAgentsHandler {
             return null;
         }
 
-        private static String jsonEscape(String s) {
+        static String jsonEscape(String s) {
             if (s == null) return "null";
-            return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
-                    .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\"";
+            StringBuilder sb = new StringBuilder(s.length() + 2);
+            sb.append('"');
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                switch (c) {
+                    case '"':  sb.append("\\\""); break;
+                    case '\\': sb.append("\\\\"); break;
+                    case '\b': sb.append("\\b");  break;
+                    case '\f': sb.append("\\f");  break;
+                    case '\n': sb.append("\\n");  break;
+                    case '\r': sb.append("\\r");  break;
+                    case '\t': sb.append("\\t");  break;
+                    default:
+                        if (c < 0x20) {
+                            sb.append(String.format("\\u%04x", (int) c));
+                        } else {
+                            sb.append(c);
+                        }
+                }
+            }
+            sb.append('"');
+            return sb.toString();
         }
     }
 
