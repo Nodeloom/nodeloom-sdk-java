@@ -141,9 +141,17 @@ public class ApiClient {
         return request("GET", "/api/credentials?teamId=" + encode(teamId));
     }
 
-    /** Run guardrail checks on text content. */
+    /**
+     * Run guardrail checks on text content.
+     *
+     * @param teamId UUID string, or empty/null when calling via an SDK token
+     *     (the backend infers the team from the token).
+     */
     public String checkGuardrails(String teamId, String requestBodyJson) throws ApiException, IOException {
-        String response = request("POST", "/api/guardrails/check?teamId=" + encode(teamId), requestBodyJson);
+        String path = (teamId == null || teamId.isEmpty())
+                ? "/api/guardrails/check"
+                : "/api/guardrails/check?teamId=" + encode(teamId);
+        String response = request("POST", path, requestBodyJson);
 
         // If the registry is wired and the response carries a guardrail session id,
         // cache it so the next trace_start can attach it for HARD-mode enforcement.

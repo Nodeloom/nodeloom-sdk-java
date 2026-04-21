@@ -50,7 +50,7 @@ public class AnthropicManagedAgentsHandler {
      */
     public SessionTrace traceSession(String sessionId) {
         Trace trace = client.trace(agentName).sessionId(sessionId).start();
-        return new SessionTrace(trace, client, guardrails);
+        return new SessionTrace(trace, client, guardrails, agentName);
     }
 
     /**
@@ -60,13 +60,15 @@ public class AnthropicManagedAgentsHandler {
         private final Trace trace;
         private final NodeLoom client;
         private final boolean guardrails;
+        private final String agentName;
         private final Map<String, Span> activeSpans = new ConcurrentHashMap<>();
         private Map<String, Object> lastOutput;
 
-        SessionTrace(Trace trace, NodeLoom client, boolean guardrails) {
+        SessionTrace(Trace trace, NodeLoom client, boolean guardrails, String agentName) {
             this.trace = trace;
             this.client = client;
             this.guardrails = guardrails;
+            this.agentName = agentName;
         }
 
         /**
@@ -128,9 +130,12 @@ public class AnthropicManagedAgentsHandler {
         public Map<String, Object> checkInput(String text) {
             if (!guardrails) return Map.of("passed", true, "violations", List.of());
             // Guardrails require a team-level API call; delegate to the REST API
-            // with a well-known body structure.
+            // with a well-known body structure. agentName binds the guardrail
+            // session to this agent for HARD-mode required-guardrail enforcement.
             try {
-                String body = "{\"text\":" + jsonEscape(text) + ",\"direction\":\"input\"}";
+                String body = "{\"text\":" + jsonEscape(text)
+                        + ",\"agentName\":" + jsonEscape(agentName)
+                        + ",\"direction\":\"input\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
                 // Fire-and-forget: return a safe default on failure
@@ -146,7 +151,9 @@ public class AnthropicManagedAgentsHandler {
         public Map<String, Object> checkOutput(String text) {
             if (!guardrails) return Map.of("passed", true, "violations", List.of());
             try {
-                String body = "{\"text\":" + jsonEscape(text) + ",\"direction\":\"output\"}";
+                String body = "{\"text\":" + jsonEscape(text)
+                        + ",\"agentName\":" + jsonEscape(agentName)
+                        + ",\"direction\":\"output\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
                 // Fire-and-forget: return a safe default on failure
