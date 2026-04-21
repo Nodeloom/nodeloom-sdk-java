@@ -64,9 +64,17 @@ public final class AgentControlPayload {
         String haltSource = stringValue(map.get("halt_source"));
         long revision = longValue(map.get("revision"), 0L);
         String requireGuardrails = stringValue(map.get("require_guardrails"));
-        long ttl = longValue(map.get("guardrail_session_ttl_seconds"), 300L);
+        long ttl = clampTtl(longValue(map.get("guardrail_session_ttl_seconds"), 300L));
         return new AgentControlPayload(agentName, halted, haltReason, haltSource,
                 revision, requireGuardrails, ttl);
+    }
+
+    /** Clamp TTL to [1, 86400] seconds; guards against a buggy server payload. */
+    private static long clampTtl(long raw) {
+        if (raw < 1L || raw > 86_400L) {
+            return 300L;
+        }
+        return raw;
     }
 
     private static String stringValue(Object v) {

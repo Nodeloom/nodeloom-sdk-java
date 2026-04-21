@@ -159,18 +159,50 @@ public final class JsonReader {
     }
 
     private Object readNumber() {
+        // Parse numbers strictly following RFC 8259 grammar so malformed input
+        // like "1e+5e+2" or "01" is rejected instead of silently corrupted.
         int start = pos;
         if (peek() == '-') pos++;
-        while (pos < input.length()) {
-            char c = input.charAt(pos);
-            if ((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
-                pos++;
-            } else {
-                break;
+
+        // Integer part: '0' or ('1'-'9') digit*
+        if (pos >= input.length()) throw new JsonParseException("Unterminated number at offset " + start);
+        char first = input.charAt(pos);
+        if (first == '0') {
+            pos++;
+        } else if (first >= '1' && first <= '9') {
+            pos++;
+            while (pos < input.length() && isDigit(input.charAt(pos))) pos++;
+        } else {
+            throw new JsonParseException("Invalid number starting at offset " + start);
+        }
+
+        // Fractional part: '.' digit+
+        boolean hasFraction = false;
+        if (pos < input.length() && input.charAt(pos) == '.') {
+            pos++;
+            hasFraction = true;
+            int fracStart = pos;
+            while (pos < input.length() && isDigit(input.charAt(pos))) pos++;
+            if (pos == fracStart) {
+                throw new JsonParseException("Fractional part requires at least one digit at offset " + start);
             }
         }
+
+        // Exponent: ('e' | 'E') ('+' | '-')? digit+
+        boolean hasExponent = false;
+        if (pos < input.length() && (input.charAt(pos) == 'e' || input.charAt(pos) == 'E')) {
+            pos++;
+            hasExponent = true;
+            if (pos < input.length() && (input.charAt(pos) == '+' || input.charAt(pos) == '-')) pos++;
+            int expStart = pos;
+            while (pos < input.length() && isDigit(input.charAt(pos))) pos++;
+            if (pos == expStart) {
+                throw new JsonParseException("Exponent requires at least one digit at offset " + start);
+            }
+        }
+
         String num = input.substring(start, pos);
-        if (num.contains(".") || num.contains("e") || num.contains("E")) {
+        if (hasFraction || hasExponent) {
             return Double.parseDouble(num);
         }
         try {
@@ -178,6 +210,10 @@ public final class JsonReader {
         } catch (NumberFormatException e) {
             return Double.parseDouble(num);
         }
+    }
+
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private Boolean readBoolean() {

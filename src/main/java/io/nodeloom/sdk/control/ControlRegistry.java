@@ -93,15 +93,14 @@ public final class ControlRegistry {
             long revision = payload.getRevision();
             boolean halted = payload.isHalted();
 
-            if (AgentControlPayload.SOURCE_TEAM.equals(source)) {
-                if (revision >= teamRevision) {
-                    teamHalted = halted;
-                    teamHaltReason = payload.getHaltReason();
-                    teamRevision = revision;
-                }
-            } else if (!halted && revision >= teamRevision) {
-                teamHalted = false;
-                teamHaltReason = null;
+            // Team-wide flag is only mutated by team-source payloads with fresh
+            // revisions. Agent-source payloads never touch team state — otherwise
+            // a late piggy-backed agent response could clobber a team halt
+            // issued after it.
+            if (AgentControlPayload.SOURCE_TEAM.equals(source) && revision >= teamRevision) {
+                teamHalted = halted;
+                teamHaltReason = payload.getHaltReason();
+                teamRevision = revision;
             }
 
             String agentName = payload.getAgentName();

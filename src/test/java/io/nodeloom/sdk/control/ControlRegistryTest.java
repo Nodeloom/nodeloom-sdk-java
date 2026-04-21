@@ -89,4 +89,29 @@ class ControlRegistryTest {
         // Should be a no-op when registry is null.
         assertDoesNotThrow(() -> ControlRegistry.raiseIfHalted(null, "agent-1"));
     }
+
+    @Test
+    void clampsNonsensicalTTL() {
+        ControlRegistry registry = new ControlRegistry();
+        // Negative or huge TTL falls back to the 300s default at payload-parse time.
+        AgentControlPayload negative = AgentControlPayload.fromJson(
+                "{\"agent_name\":\"a\",\"guardrail_session_ttl_seconds\":-5}");
+        assertEquals(300L, negative.getGuardrailSessionTtlSeconds());
+        AgentControlPayload huge = AgentControlPayload.fromJson(
+                "{\"agent_name\":\"a\",\"guardrail_session_ttl_seconds\":1000000000}");
+        assertEquals(300L, huge.getGuardrailSessionTtlSeconds());
+    }
+
+    @Test
+    void agentSourcePayloadDoesNotClearTeamHalt() {
+        ControlRegistry registry = new ControlRegistry();
+        registry.update(new AgentControlPayload("agent-1", true, "incident",
+                AgentControlPayload.SOURCE_TEAM, 1_000_000L, "OFF", 300L));
+        // Even a higher revision from an agent-source payload must not clear team state.
+        registry.update(new AgentControlPayload("agent-1", false, null,
+                AgentControlPayload.SOURCE_AGENT, 2_000_000L, "OFF", 300L));
+        AgentControlPayload snap = registry.snapshot("agent-1");
+        assertTrue(snap.isHalted());
+        assertEquals(AgentControlPayload.SOURCE_TEAM, snap.getHaltSource());
+    }
 }

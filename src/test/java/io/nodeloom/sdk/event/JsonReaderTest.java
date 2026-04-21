@@ -48,4 +48,24 @@ class JsonReaderTest {
         assertTrue(JsonReader.parseObject(null).isEmpty());
         assertTrue(JsonReader.parseObject("").isEmpty());
     }
+
+    @Test
+    void rejectsMalformedNumbers() {
+        // Double exponent, leading zeros, and dangling decimals must throw per RFC 8259.
+        assertThrows(JsonReader.JsonParseException.class,
+                () -> JsonReader.parseObject("{\"n\":1e+5e+2}"));
+        assertThrows(JsonReader.JsonParseException.class,
+                () -> JsonReader.parseObject("{\"n\":01}"));
+        assertThrows(JsonReader.JsonParseException.class,
+                () -> JsonReader.parseObject("{\"n\":1.}"));
+        assertThrows(JsonReader.JsonParseException.class,
+                () -> JsonReader.parseObject("{\"n\":1e}"));
+    }
+
+    @Test
+    void acceptsValidScientificAndNegatives() {
+        assertEquals(1.5e10, ((Number) JsonReader.parseObject("{\"n\":1.5e10}").get("n")).doubleValue());
+        assertEquals(-42L, JsonReader.parseObject("{\"n\":-42}").get("n"));
+        assertEquals(1.0e-5, ((Number) JsonReader.parseObject("{\"n\":1e-5}").get("n")).doubleValue());
+    }
 }
