@@ -1,5 +1,9 @@
 package io.nodeloom.sdk.api;
 
+import io.nodeloom.sdk.control.AgentControlPayload;
+import io.nodeloom.sdk.control.ControlRegistry;
+import io.nodeloom.sdk.event.JsonReader;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -28,13 +32,19 @@ public class ApiClient {
     private final HttpClient httpClient;
     private final String endpoint;
     private final String apiKey;
+    private final ControlRegistry controlRegistry;
 
     public ApiClient(String apiKey, String endpoint) {
+        this(apiKey, endpoint, null);
+    }
+
+    public ApiClient(String apiKey, String endpoint, ControlRegistry controlRegistry) {
         this.apiKey = apiKey;
         this.endpoint = endpoint.replaceAll("/+$", "");
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
+        this.controlRegistry = controlRegistry;
     }
 
     /**
@@ -133,7 +143,39 @@ public class ApiClient {
 
     /** Run guardrail checks on text content. */
     public String checkGuardrails(String teamId, String requestBodyJson) throws ApiException, IOException {
-        return request("POST", "/api/guardrails/check?teamId=" + encode(teamId), requestBodyJson);
+        String response = request("POST", "/api/guardrails/check?teamId=" + encode(teamId), requestBodyJson);
+
+        // If the registry is wired and the response carries a guardrail session id,
+        // cache it so the next trace_start can attach it for HARD-mode enforcement.
+        if (controlRegistry != null && response != null) {
+            try {
+                Map<String, Object> parsed = JsonReader.parseObject(response);
+                Object sessionId = parsed.get("guardrailSessionId");
+                if (sessionId instanceof String && !((String) sessionId).isEmpty()) {
+                    String agentName = extractAgentName(requestBodyJson);
+                    if (agentName != null && !agentName.isEmpty()) {
+                        AgentControlPayload state = controlRegistry.snapshot(agentName);
+                        controlRegistry.recordGuardrailSession(agentName, (String) sessionId,
+                                state.getGuardrailSessionTtlSeconds());
+                    }
+                }
+            } catch (RuntimeException ignored) {
+                // Best-effort caching; never fail the user's call.
+            }
+        }
+        return response;
+    }
+
+    /** Convenience: parse {@code agentName} out of the request body JSON. */
+    private static String extractAgentName(String requestBodyJson) {
+        if (requestBodyJson == null) return null;
+        try {
+            Map<String, Object> body = JsonReader.parseObject(requestBodyJson);
+            Object name = body.get("agentName");
+            return name == null ? null : name.toString();
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     // -- Feedback --
@@ -229,6 +271,22 @@ public class ApiClient {
     /** Get guardrail config for an SDK agent (read-only, configure via NodeLoom UI). */
     public String getGuardrailConfig(String agentName) throws ApiException, IOException {
         return request("GET", "/api/sdk/v1/agents/" + encode(agentName) + "/guardrails");
+    }
+
+    // -- Agent Remote Control (kill switch) --
+
+    /**
+     * Fetch the current remote-control payload for an agent. When the client
+     * was built with a {@link ControlRegistry}, the response is also merged
+     * into the registry so subsequent traces immediately observe the latest halt state.
+     */
+    public AgentControlPayload getAgentControl(String agentName) throws ApiException, IOException {
+        String json = request("GET", "/api/sdk/v1/agents/" + encode(agentName) + "/control");
+        AgentControlPayload payload = AgentControlPayload.fromJson(json);
+        if (controlRegistry != null) {
+            controlRegistry.update(payload);
+        }
+        return payload;
     }
 
     private static String encode(String value) {
