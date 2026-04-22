@@ -266,4 +266,70 @@ class AnthropicManagedAgentsHandlerTest {
         session.end();
         client.close();
     }
+
+    @Test
+    @DisplayName("jsonEscape produces null literal for null input")
+    void jsonEscapeNull() {
+        assertEquals("null", AnthropicManagedAgentsHandler.SessionTrace.jsonEscape(null));
+    }
+
+    @Test
+    @DisplayName("jsonEscape wraps empty string in quotes")
+    void jsonEscapeEmpty() {
+        assertEquals("\"\"", AnthropicManagedAgentsHandler.SessionTrace.jsonEscape(""));
+    }
+
+    @Test
+    @DisplayName("jsonEscape handles short-escape characters per RFC 8259")
+    void jsonEscapeShortEscapes() {
+        assertEquals("\"\\\"\\\\\\b\\f\\n\\r\\t\"",
+            AnthropicManagedAgentsHandler.SessionTrace.jsonEscape("\"\\\b\f\n\r\t"));
+    }
+
+    @Test
+    @DisplayName("jsonEscape uses six-hex escape for control chars U+0000..U+001F without short escape")
+    void jsonEscapeControlChars() {
+        // Every control code that isn't one of the RFC 8259 short escapes
+        // (b, t, n, f, r) must be rendered as the six-character hex form.
+        // Without this the SDK would emit invalid JSON the backend rejects.
+        String input = "A\u0000B\u0001C\u000BD\u001FE\u007F"; // U+007F (DEL) is printable in JSON
+        String out = AnthropicManagedAgentsHandler.SessionTrace.jsonEscape(input);
+        assertEquals("\"A\\u0000B\\u0001C\\u000bD\\u001fE\u007f\"", out);
+    }
+
+    @Test
+    @DisplayName("jsonEscape preserves ASCII printable characters")
+    void jsonEscapeAsciiPrintable() {
+        assertEquals("\"hello, world!\"",
+            AnthropicManagedAgentsHandler.SessionTrace.jsonEscape("hello, world!"));
+    }
+
+    @Test
+    @DisplayName("jsonEscape preserves non-ASCII Unicode")
+    void jsonEscapeUnicode() {
+        // RFC 8259 allows non-ASCII chars unescaped in UTF-8 JSON.
+        assertEquals("\"héllo 🌍 日本\"",
+            AnthropicManagedAgentsHandler.SessionTrace.jsonEscape("héllo 🌍 日本"));
+    }
+
+    @Test
+    @DisplayName("checkInput with control-char text does not throw")
+    void checkInputControlCharText() {
+        // Previously, the hand-rolled escaper left control chars unescaped,
+        // which could produce invalid JSON the backend rejects. Now the
+        // escaper is RFC 8259 compliant; the handler falls through to the
+        // safe default on any transport failure.
+        NodeLoom client = NodeLoom.builder().apiKey("test").build();
+        AnthropicManagedAgentsHandler handler = AnthropicManagedAgentsHandler.builder()
+            .client(client)
+            .agentName("test")
+            .guardrails(true)
+            .build();
+
+        var session = handler.traceSession("sess_ctrl");
+        Map<String, Object> result = session.checkInput("tool output\u0001 with raw bytes\u001b[0m");
+        assertTrue((Boolean) result.get("passed"));
+        session.end();
+        client.close();
+    }
 }

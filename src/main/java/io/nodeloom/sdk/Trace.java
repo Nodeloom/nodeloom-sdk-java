@@ -1,5 +1,6 @@
 package io.nodeloom.sdk;
 
+import io.nodeloom.sdk.control.ControlRegistry;
 import io.nodeloom.sdk.event.TelemetryEvent;
 import io.nodeloom.sdk.queue.TelemetryQueue;
 
@@ -24,6 +25,7 @@ public final class Trace implements AutoCloseable {
     private final String agentName;
     private final TelemetryQueue queue;
     private final NodeLoomConfig config;
+    private final ControlRegistry controlRegistry;
     private final List<Span> spans = new ArrayList<>();
 
     private Map<String, Object> input;
@@ -35,10 +37,15 @@ public final class Trace implements AutoCloseable {
     private boolean ended = false;
 
     Trace(String agentName, TelemetryQueue queue, NodeLoomConfig config) {
+        this(agentName, queue, config, null);
+    }
+
+    Trace(String agentName, TelemetryQueue queue, NodeLoomConfig config, ControlRegistry controlRegistry) {
         this.traceId = UUID.randomUUID().toString();
         this.agentName = agentName;
         this.queue = queue;
         this.config = config;
+        this.controlRegistry = controlRegistry;
     }
 
     /** Returns the unique identifier for this trace. */
@@ -80,6 +87,10 @@ public final class Trace implements AutoCloseable {
         if (started) {
             throw new IllegalStateException("Trace has already been started");
         }
+        // Fail fast on a halted agent before allocating any state. Throws
+        // AgentHaltedException if the registry says the agent (or team) is halted.
+        ControlRegistry.raiseIfHalted(controlRegistry, agentName);
+
         started = true;
 
         TelemetryEvent event = new TelemetryEvent()
@@ -105,6 +116,16 @@ public final class Trace implements AutoCloseable {
             event.put("framework", framework);
         }
         event.put("sdk_language", "java");
+
+        // Phase 2: attach the cached guardrail session id so HARD-mode
+        // required-guardrail enforcement on the backend can correlate this trace.
+        if (controlRegistry != null) {
+            String guardrailSessionId = controlRegistry.takeGuardrailSession(agentName);
+            if (guardrailSessionId != null) {
+                event.put("guardrail_session_id", guardrailSessionId);
+            }
+        }
+
         event.putTimestampNow("timestamp");
 
         queue.offer(event);

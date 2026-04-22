@@ -2,6 +2,8 @@ package io.nodeloom.sdk;
 
 import io.nodeloom.sdk.api.ApiClient;
 import io.nodeloom.sdk.batch.BatchProcessor;
+import io.nodeloom.sdk.control.ControlPoller;
+import io.nodeloom.sdk.control.ControlRegistry;
 import io.nodeloom.sdk.queue.TelemetryQueue;
 import io.nodeloom.sdk.transport.HttpTransport;
 
@@ -48,21 +50,32 @@ public final class NodeLoom implements AutoCloseable {
     private static final int DEFAULT_MAX_RETRIES = 3;
     private static final long DEFAULT_BASE_RETRY_DELAY_MS = 1_000;
     private static final long DEFAULT_HTTP_TIMEOUT_MS = 10_000;
+    private static final long DEFAULT_CONTROL_POLL_INTERVAL_MS = 60_000;
     private static final long SHUTDOWN_TIMEOUT_MS = 5_000;
 
     private final NodeLoomConfig config;
     private final TelemetryQueue queue;
     private final BatchProcessor batchProcessor;
+    private final ControlRegistry controlRegistry;
+    private final ControlPoller controlPoller;
     private volatile ApiClient apiClient;
     private volatile boolean closed = false;
 
-    private NodeLoom(NodeLoomConfig config) {
+    private NodeLoom(NodeLoomConfig config, long controlPollIntervalMs) {
         this.config = config;
         this.queue = new TelemetryQueue(config.getMaxQueueSize());
+        this.controlRegistry = new ControlRegistry();
 
-        HttpTransport transport = new HttpTransport(config);
+        HttpTransport transport = new HttpTransport(config, controlRegistry);
         this.batchProcessor = new BatchProcessor(queue, transport, config);
         this.batchProcessor.start(config.getFlushIntervalMs());
+
+        if (controlPollIntervalMs > 0) {
+            this.controlPoller = new ControlPoller(controlRegistry, this::api, controlPollIntervalMs);
+            this.controlPoller.start();
+        } else {
+            this.controlPoller = null;
+        }
 
         logger.fine("NodeLoom SDK initialized (endpoint=" + config.getEndpoint()
                 + ", environment=" + config.getEnvironment() + ")");
@@ -76,6 +89,8 @@ public final class NodeLoom implements AutoCloseable {
         this.config = config;
         this.queue = queue;
         this.batchProcessor = batchProcessor;
+        this.controlRegistry = new ControlRegistry();
+        this.controlPoller = null;
     }
 
     /**
@@ -101,7 +116,16 @@ public final class NodeLoom implements AutoCloseable {
         if (closed) {
             throw new IllegalStateException("NodeLoom client has been closed");
         }
-        return new Trace(agentName, queue, config);
+        return new Trace(agentName, queue, config, controlRegistry);
+    }
+
+    /**
+     * Direct accessor to the in-memory control registry. Useful for tests and
+     * custom workflows; production callers should rely on the implicit halt
+     * detection inside {@link #trace(String)}.
+     */
+    public ControlRegistry control() {
+        return controlRegistry;
     }
 
     /**
@@ -172,6 +196,9 @@ public final class NodeLoom implements AutoCloseable {
         }
         closed = true;
         logger.fine("Shutting down NodeLoom SDK");
+        if (controlPoller != null) {
+            controlPoller.stop();
+        }
         batchProcessor.shutdown(SHUTDOWN_TIMEOUT_MS);
     }
 
@@ -184,7 +211,7 @@ public final class NodeLoom implements AutoCloseable {
         if (apiClient == null) {
             synchronized (this) {
                 if (apiClient == null) {
-                    apiClient = new ApiClient(config.getApiKey(), config.getEndpoint());
+                    apiClient = new ApiClient(config.getApiKey(), config.getEndpoint(), controlRegistry);
                 }
             }
         }
@@ -206,6 +233,7 @@ public final class NodeLoom implements AutoCloseable {
         private int maxRetries = DEFAULT_MAX_RETRIES;
         private long baseRetryDelayMs = DEFAULT_BASE_RETRY_DELAY_MS;
         private long httpTimeoutMs = DEFAULT_HTTP_TIMEOUT_MS;
+        private long controlPollIntervalMs = DEFAULT_CONTROL_POLL_INTERVAL_MS;
 
         private Builder() {
         }
@@ -331,6 +359,20 @@ public final class NodeLoom implements AutoCloseable {
         }
 
         /**
+         * Sets the standalone control-poll interval. The control registry is
+         * also updated from every telemetry batch response, so polling is
+         * mainly useful for sparse-traffic agents. Set to 0 to disable.
+         * Defaults to 60,000 (60 seconds).
+         *
+         * @param controlPollIntervalMs the poll interval in milliseconds
+         * @return this builder
+         */
+        public Builder controlPollIntervalMs(long controlPollIntervalMs) {
+            this.controlPollIntervalMs = controlPollIntervalMs;
+            return this;
+        }
+
+        /**
          * Builds and returns a new {@link NodeLoom} client.
          *
          * @return a configured, ready-to-use NodeLoom client
@@ -359,7 +401,7 @@ public final class NodeLoom implements AutoCloseable {
                     baseRetryDelayMs,
                     httpTimeoutMs
             );
-            return new NodeLoom(config);
+            return new NodeLoom(config, controlPollIntervalMs);
         }
     }
 }
