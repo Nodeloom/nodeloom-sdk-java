@@ -9,6 +9,8 @@ import io.nodeloom.sdk.TraceStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handler for auto-instrumenting Anthropic Managed Agent sessions with NodeLoom.
@@ -28,6 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * }</pre>
  */
 public class AnthropicManagedAgentsHandler {
+
+    private static final Logger logger = Logger.getLogger(AnthropicManagedAgentsHandler.class.getName());
 
     private final NodeLoom client;
     private final String agentName;
@@ -50,7 +54,7 @@ public class AnthropicManagedAgentsHandler {
      */
     public SessionTrace traceSession(String sessionId) {
         Trace trace = client.trace(agentName).sessionId(sessionId).start();
-        return new SessionTrace(trace, client, guardrails);
+        return new SessionTrace(trace, client, guardrails, agentName);
     }
 
     /**
@@ -60,13 +64,15 @@ public class AnthropicManagedAgentsHandler {
         private final Trace trace;
         private final NodeLoom client;
         private final boolean guardrails;
+        private final String agentName;
         private final Map<String, Span> activeSpans = new ConcurrentHashMap<>();
         private Map<String, Object> lastOutput;
 
-        SessionTrace(Trace trace, NodeLoom client, boolean guardrails) {
+        SessionTrace(Trace trace, NodeLoom client, boolean guardrails, String agentName) {
             this.trace = trace;
             this.client = client;
             this.guardrails = guardrails;
+            this.agentName = agentName;
         }
 
         /**
@@ -128,12 +134,15 @@ public class AnthropicManagedAgentsHandler {
         public Map<String, Object> checkInput(String text) {
             if (!guardrails) return Map.of("passed", true, "violations", List.of());
             // Guardrails require a team-level API call; delegate to the REST API
-            // with a well-known body structure.
+            // with a well-known body structure. agentName binds the guardrail
+            // session to this agent for HARD-mode required-guardrail enforcement.
             try {
-                String body = "{\"text\":" + jsonEscape(text) + ",\"direction\":\"input\"}";
+                String body = "{\"text\":" + jsonEscape(text)
+                        + ",\"agentName\":" + jsonEscape(agentName)
+                        + ",\"direction\":\"input\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
-                // Fire-and-forget: return a safe default on failure
+                logger.log(Level.FINE, "Anthropic guardrail input check failed", e);
             }
             return Map.of("passed", true, "violations", List.of());
         }
@@ -146,10 +155,12 @@ public class AnthropicManagedAgentsHandler {
         public Map<String, Object> checkOutput(String text) {
             if (!guardrails) return Map.of("passed", true, "violations", List.of());
             try {
-                String body = "{\"text\":" + jsonEscape(text) + ",\"direction\":\"output\"}";
+                String body = "{\"text\":" + jsonEscape(text)
+                        + ",\"agentName\":" + jsonEscape(agentName)
+                        + ",\"direction\":\"output\"}";
                 client.api().checkGuardrails("", body);
             } catch (Exception e) {
-                // Fire-and-forget: return a safe default on failure
+                logger.log(Level.FINE, "Anthropic guardrail output check failed", e);
             }
             return Map.of("passed", true, "violations", List.of());
         }
@@ -222,10 +233,30 @@ public class AnthropicManagedAgentsHandler {
             return null;
         }
 
-        private static String jsonEscape(String s) {
+        static String jsonEscape(String s) {
             if (s == null) return "null";
-            return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
-                    .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\"";
+            StringBuilder sb = new StringBuilder(s.length() + 2);
+            sb.append('"');
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                switch (c) {
+                    case '"':  sb.append("\\\""); break;
+                    case '\\': sb.append("\\\\"); break;
+                    case '\b': sb.append("\\b");  break;
+                    case '\f': sb.append("\\f");  break;
+                    case '\n': sb.append("\\n");  break;
+                    case '\r': sb.append("\\r");  break;
+                    case '\t': sb.append("\\t");  break;
+                    default:
+                        if (c < 0x20) {
+                            sb.append(String.format("\\u%04x", (int) c));
+                        } else {
+                            sb.append(c);
+                        }
+                }
+            }
+            sb.append('"');
+            return sb.toString();
         }
     }
 
