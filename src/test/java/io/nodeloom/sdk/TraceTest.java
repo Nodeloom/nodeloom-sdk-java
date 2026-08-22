@@ -189,7 +189,7 @@ class TraceTest {
         Span span = trace.span("openai-call", SpanType.LLM);
         span.setInput(Map.of("prompt", "hello"));
         span.setOutput(Map.of("response", "world"));
-        span.setTokenUsage(150, 200, "gpt-4o");
+        span.setTokenUsage(150, 200, "gpt-5.6-terra");
         span.end();
 
         assertEquals(1, queue.size());
@@ -211,7 +211,7 @@ class TraceTest {
         assertEquals(150, tokenUsage.get("prompt_tokens"));
         assertEquals(200, tokenUsage.get("completion_tokens"));
         assertEquals(350, tokenUsage.get("total_tokens"));
-        assertEquals("gpt-4o", tokenUsage.get("model"));
+        assertEquals("gpt-5.6-terra", tokenUsage.get("model"));
     }
 
     @Test
@@ -468,7 +468,7 @@ class TraceTest {
         queue.drain(10);
 
         Span span = trace.span("llm", SpanType.LLM);
-        span.setTokenUsage(150, 200, "gpt-4o");
+        span.setTokenUsage(150, 200, "gpt-5.6-terra");
         span.end();
 
         List<TelemetryEvent> events = queue.drain(10);
@@ -477,7 +477,7 @@ class TraceTest {
         assertTrue(json.contains("\"prompt_tokens\":150"));
         assertTrue(json.contains("\"completion_tokens\":200"));
         assertTrue(json.contains("\"total_tokens\":350"));
-        assertTrue(json.contains("\"model\":\"gpt-4o\""));
+        assertTrue(json.contains("\"model\":\"gpt-5.6-terra\""));
     }
 
     @Test

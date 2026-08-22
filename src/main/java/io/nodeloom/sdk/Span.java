@@ -115,7 +115,7 @@ public final class Span implements AutoCloseable {
      *
      * @param promptTokens     number of tokens in the prompt
      * @param completionTokens number of tokens in the completion
-     * @param model            the model identifier (e.g., "gpt-4o")
+     * @param model            the model identifier (e.g., "gpt-5.6-terra")
      * @return this span for chaining
      */
     public Span setTokenUsage(int promptTokens, int completionTokens, String model) {

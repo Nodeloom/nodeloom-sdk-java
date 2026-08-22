@@ -185,7 +185,7 @@ class NodeLoomTest {
                     try (Span span = trace.span("llm-call", SpanType.LLM)) {
                         span.setInput(Map.of("prompt", "hello"));
                         span.setOutput(Map.of("response", "world"));
-                        span.setTokenUsage(10, 20, "gpt-4o");
+                        span.setTokenUsage(10, 20, "gpt-5.6-terra");
                     }
                 }
             }
