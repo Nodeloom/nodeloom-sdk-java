@@ -52,7 +52,7 @@ try (NodeLoom client = NodeLoom.builder()
         try (Span span = trace.span("llm-call", SpanType.LLM)) {
             span.setInput(Map.of("prompt", "What is NodeLoom?"));
             span.setOutput(Map.of("response", "NodeLoom is an AI agent operations platform."));
-            span.setTokenUsage(15, 20, "gpt-4o");
+            span.setTokenUsage(15, 20, "gpt-5.6-terra");
         }
     }
 }
@@ -101,7 +101,7 @@ try (Span parent = trace.span("agent-step", SpanType.AGENT)) {
     try (Span child = parent.span("llm-call", SpanType.LLM)) {
         child.setInput(Map.of("prompt", "Hello"));
         child.setOutput(Map.of("response", "Hi there!"));
-        child.setTokenUsage(10, 20, "gpt-4o");
+        child.setTokenUsage(10, 20, "gpt-5.6-terra");
     }
 }
 ```
