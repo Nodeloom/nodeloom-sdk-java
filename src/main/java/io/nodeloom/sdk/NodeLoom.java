@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  *         try (Span span = trace.span("llm-call", SpanType.LLM)) {
  *             span.setInput(Map.of("prompt", "Hello"));
  *             span.setOutput(Map.of("response", "Hi there!"));
- *             span.setTokenUsage(10, 20, "gpt-4o");
+ *             span.setTokenUsage(10, 20, "gpt-5.6-terra");
  *         }
  *     }
  * }
