@@ -3,3 +3,6 @@ target/
 *.jar
 .idea/
 *.iml
+
+# Local security scan output
+snyk-findings.json
